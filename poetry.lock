@@ -1548,6 +1548,7 @@ description = "Clang Python Bindings, mirrored from the official LLVM repo: http
 optional = false
 python-versions = "*"
 files = [
+    {file = "libclang-18.1.1-1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:0b2e143f0fac830156feb56f9231ff8338c20aecfe72b4ffe96f19e5a1dbb69a"},
     {file = "libclang-18.1.1-py2.py3-none-macosx_10_9_x86_64.whl", hash = "sha256:6f14c3f194704e5d09769108f03185fce7acaf1d1ae4bbb2f30a72c2400cb7c5"},
     {file = "libclang-18.1.1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:83ce5045d101b669ac38e6da8e58765f12da2d3aafb3b9b98d88b286a60964d8"},
     {file = "libclang-18.1.1-py2.py3-none-manylinux2010_x86_64.whl", hash = "sha256:c533091d8a3bbf7460a00cb6c1a71da93bffe148f172c7d03b1c31fbf8aa2a0b"},
@@ -3993,26 +3994,29 @@ test = ["Cython", "array-api-strict (>=2.0)", "asv", "gmpy2", "hypothesis (>=6.3
 
 [[package]]
 name = "sentence-transformers"
-version = "3.1.1"
+version = "3.2.0"
 description = "State-of-the-Art Text Embeddings"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sentence_transformers-3.1.1-py3-none-any.whl", hash = "sha256:c73bf6f17e3676bb9372a6133a254ebfb5907586b470f2bac5a840c64c3cf97e"},
-    {file = "sentence_transformers-3.1.1.tar.gz", hash = "sha256:8f00020ef4ad6b918475c38af545c22f61403b67eb22d994860bab06902db160"},
+    {file = "sentence_transformers-3.2.0-py3-none-any.whl", hash = "sha256:02dbe96d669d30084ea11af94e7c17895c31748e86f20af4dbcc4ea6522b3506"},
+    {file = "sentence_transformers-3.2.0.tar.gz", hash = "sha256:4da78ba340fffc48d60a25415145cbe665216d374c948ec54c3163bd352bcc27"},
 ]
 
 [package.dependencies]
-huggingface-hub = ">=0.19.3"
+huggingface-hub = ">=0.20.0"
 Pillow = "*"
 scikit-learn = "*"
 scipy = "*"
 torch = ">=1.11.0"
 tqdm = "*"
-transformers = ">=4.38.0,<5.0.0"
+transformers = ">=4.41.0,<5.0.0"
 
 [package.extras]
 dev = ["accelerate (>=0.20.3)", "datasets", "pre-commit", "pytest", "pytest-cov"]
+onnx = ["optimum[onnxruntime] (>=1.23.0)"]
+onnx-gpu = ["optimum[onnxruntime-gpu] (>=1.23.0)"]
+openvino = ["optimum-intel[openvino] (>=1.20.0)"]
 train = ["accelerate (>=0.20.3)", "datasets"]
 
 [[package]]
@@ -5318,4 +5322,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "fa2e5e0b638632fe2656c280a3019c3688ed735b8d796b28d95f6bf995b6485b"
+content-hash = "cf14df05ca02022d7a534d0cf70a18e1d4526e8eb94e32c3a4b7a0f27a581603"
