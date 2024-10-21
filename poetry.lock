@@ -1548,6 +1548,7 @@ description = "Clang Python Bindings, mirrored from the official LLVM repo: http
 optional = false
 python-versions = "*"
 files = [
+    {file = "libclang-18.1.1-1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:0b2e143f0fac830156feb56f9231ff8338c20aecfe72b4ffe96f19e5a1dbb69a"},
     {file = "libclang-18.1.1-py2.py3-none-macosx_10_9_x86_64.whl", hash = "sha256:6f14c3f194704e5d09769108f03185fce7acaf1d1ae4bbb2f30a72c2400cb7c5"},
     {file = "libclang-18.1.1-py2.py3-none-macosx_11_0_arm64.whl", hash = "sha256:83ce5045d101b669ac38e6da8e58765f12da2d3aafb3b9b98d88b286a60964d8"},
     {file = "libclang-18.1.1-py2.py3-none-manylinux2010_x86_64.whl", hash = "sha256:c533091d8a3bbf7460a00cb6c1a71da93bffe148f172c7d03b1c31fbf8aa2a0b"},
@@ -1561,13 +1562,13 @@ files = [
 
 [[package]]
 name = "litellm"
-version = "1.48.19"
+version = "1.50.0"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.48.19-py3-none-any.whl", hash = "sha256:bdd4ac069c552db8554aaf54b2e4584fb8bfc6115a72bfa8bd07a08faa83365e"},
-    {file = "litellm-1.48.19.tar.gz", hash = "sha256:c0cc0df325f2846ecd983e2d66857f660581526fdc6a1df74b0055cbb08bd360"},
+    {file = "litellm-1.50.0-py3-none-any.whl", hash = "sha256:97e25a2df273fdac012334515d84ce732ffa14f07582db2898fdd90bb85f35fe"},
+    {file = "litellm-1.50.0.tar.gz", hash = "sha256:2202506b842e6048222d284f8b07c0491460cd256136202dd0da74a9aec2fcce"},
 ]
 
 [package.dependencies]
@@ -1576,7 +1577,7 @@ click = "*"
 importlib-metadata = ">=6.8.0"
 jinja2 = ">=3.1.2,<4.0.0"
 jsonschema = ">=4.22.0,<5.0.0"
-openai = ">=1.51.0"
+openai = ">=1.52.0"
 pydantic = ">=2.0.0,<3.0.0"
 python-dotenv = ">=0.2.0"
 requests = ">=2.31.0,<3.0.0"
@@ -2452,13 +2453,13 @@ files = [
 
 [[package]]
 name = "openai"
-version = "1.51.2"
+version = "1.52.0"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.7.1"
 files = [
-    {file = "openai-1.51.2-py3-none-any.whl", hash = "sha256:5c5954711cba931423e471c37ff22ae0fd3892be9b083eee36459865fbbb83fa"},
-    {file = "openai-1.51.2.tar.gz", hash = "sha256:c6a51fac62a1ca9df85a522e462918f6bb6bc51a8897032217e453a0730123a6"},
+    {file = "openai-1.52.0-py3-none-any.whl", hash = "sha256:0c249f20920183b0a2ca4f7dba7b0452df3ecd0fa7985eb1d91ad884bc3ced9c"},
+    {file = "openai-1.52.0.tar.gz", hash = "sha256:95c65a5f77559641ab8f3e4c3a050804f7b51d278870e2ec1f7444080bfe565a"},
 ]
 
 [package.dependencies]
@@ -5318,4 +5319,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "fa2e5e0b638632fe2656c280a3019c3688ed735b8d796b28d95f6bf995b6485b"
+content-hash = "29da4fb28954485bacbb0b9697cf423bde1c802eefa23bf71d15ce194800bbf3"
