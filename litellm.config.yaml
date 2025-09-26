@@ -1,0 +1,17 @@
+#model_list:
+#  - model_name: gpt-4o-mini       
+#    litellm_params:
+#      model: gpt-4o-mini    
+#      api_key: "sk-VQ67FV63lGAIxKNb7orSRBnOPjMb53G5cHroPW49a9gjVD0v"   
+
+model_list:
+  - model_name: gpt-4o   
+    litellm_params:
+      model: openai/gpt-4o
+      api_base: https://api.lingleap.com/v1
+      api_key: os.environ/OPENAI_API_KEY
+
+
+
+
+
