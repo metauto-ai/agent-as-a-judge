@@ -1,0 +1,35 @@
+{
+    "conversation_file": "/home/mina/Workspace/Artemis_agent/artemis-agent-evals/artemis-agent/conversation_results_9d7a527b-4c0e-4a63-ac03-1b94f6e5beaf.jsonl",
+    "devai_instance": "02 Maze Solver Q Learning Gridworld Rl",
+    "session_complete": true,
+    "total_requirements": 0,
+    "satisfied_requirements": 0,
+    "satisfaction_rate": 0,
+    "total_time": 0.002035379409790039,
+    "dependency_validation": {
+        "plan_tasks": 8,
+        "devai_requirements": 0,
+        "dependency_violations": [],
+        "topological_valid": true,
+        "cycle_detection": {},
+        "coverage_analysis": {
+            "total_requirements": 0,
+            "covered_requirements": 0,
+            "missing_requirements": [],
+            "coverage_percentage": 0
+        },
+        "plan_topological_order": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+        ],
+        "devai_topological_order": [],
+        "violation_count": 0
+    },
+    "judge_stats": []
+}
