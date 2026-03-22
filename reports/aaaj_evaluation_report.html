@@ -1,0 +1,4000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Agent-as-a-Judge Evaluation Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222536;
+    --border: #2e3149;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --accent: #6366f1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+  /* ─── Header ─── */
+  .hero {
+    background: linear-gradient(135deg, #1a1d27 0%, #0f1117 60%, #1a1040 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 48px 40px 36px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(135deg, #a5b4fc, #818cf8, #6ee7b7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p  { color: var(--muted); margin-top: 8px; font-size: 0.95rem; }
+  .meta-pills { display: flex; gap: 12px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+  .pill { padding: 4px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; border: 1px solid var(--border); background: var(--surface2); }
+
+  /* ─── Layout ─── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  section.task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 32px; overflow: hidden; }
+  .task-header { display: flex; align-items: center; gap: 14px; padding: 20px 24px 12px; border-bottom: 1px solid var(--border); }
+  .task-num { font-size: 0.75rem; font-weight: 700; background: var(--accent); color: white; padding: 3px 10px; border-radius: 6px; letter-spacing: .05em; }
+  .task-title { font-size: 1.1rem; font-weight: 700; }
+  .task-query { padding: 12px 24px; font-size: 0.85rem; color: var(--muted); border-bottom: 1px solid var(--border); font-style: italic; }
+
+  /* ─── Framework Cards ─── */
+  .fw-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; padding: 20px 24px; }
+  .fw-card { border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .fw-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; }
+  .fw-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 0.78rem; color: var(--muted); }
+  .na { color: var(--muted); font-size: 0.85rem; }
+
+  /* ─── Score Bar ─── */
+  .bar-wrap { position: relative; height: 22px; background: var(--surface2); border-radius: 11px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 11px; transition: width 0.8s ease; }
+  .bar-label { position: absolute; right: 8px; top: 2px; font-size: 0.78rem; font-weight: 700; color: white; mix-blend-mode: normal; }
+
+  /* ─── Badges ─── */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+  .badge.pass { background: rgba(16,185,129,.2); color: #34d399; }
+  .badge.fail { background: rgba(239,68,68,.2);  color: #f87171; }
+  .badge.unknown { background: var(--surface2); color: var(--muted); }
+
+  /* ─── Requirement Tables ─── */
+  .req-details { padding: 0 24px 16px; }
+  .req-details summary { cursor: pointer; padding: 10px 0; font-size: 0.88rem; font-weight: 600; }
+  .req-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.82rem; }
+  .req-table th { text-align: left; padding: 8px 10px; background: var(--surface2); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+  .req-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .req-idx   { font-weight: 700; width: 40px; }
+  .req-crit  { width: 35%; }
+  .req-reason { color: var(--muted); font-size: 0.78rem; }
+
+  /* ─── Summary ─── */
+  .summary-wrap { overflow-x: auto; }
+  .summary-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .summary-table th, .summary-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  .summary-table th { background: var(--surface2); font-weight: 700; }
+  .summary-table tr:hover td { background: var(--surface2); }
+  .avg-row td { background: var(--surface2) !important; border-top: 2px solid var(--border); }
+
+  /* ─── Chart ─── */
+  .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 32px; }
+  .chart-wrap h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  @media(max-width:700px){ .charts-grid { grid-template-columns: 1fr; } }
+
+  /* ─── Section headings ─── */
+  .section-title { font-size: 1.3rem; font-weight: 800; margin: 40px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  footer { text-align: center; padding: 32px; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ─── Hero ─── -->
+<div class="hero">
+  <h1>🤖 Agent-as-a-Judge</h1>
+  <h1>Evaluation Report</h1>
+  <p>Automated evaluation of AI developer agents across all DevAI tasks</p>
+  <div class="meta-pills">
+    <span class="pill">📅 Generated: 2026-03-16 13:04</span>
+    <span class="pill">🗂 Tasks: 55</span>
+    <span class="pill">🤖 Frameworks: GPT-Pilot · MetaGPT · OpenHands</span>
+    <span class="pill">⚙️ Setting: Gray-Box</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ─── Overview Summary ─── -->
+  <h2 class="section-title">📊 Overview — Requirement Satisfaction Scores</h2>
+  
+    <div class="summary-wrap">
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Task</th>
+            <th style="color:#6366f1">GPT-Pilot</th><th style="color:#10b981">MetaGPT</th><th style="color:#f59e0b">OpenHands</th>
+          </tr>
+        </thead>
+        <tbody><tr><td><a href="#task-01">01 Image Classification ResNet18 Fashion MNIS</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-02">02 Maze Solver Q Learning Gridworld RL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-03">03 Text Classification NaiveBayes 20Newsgroup</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-04">04 Text Generation GPT2 Prompts DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-05">05 Game Simulation DQN CartPole v1 RL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-06">06 Sentiment Analysis SVM Sentiment140 ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-07">07 Image Super Resolution SRCNN Set5 DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-08">08 Robot Control PPO PyBullet RL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-09">09 Recommendation System NCF MovieLens ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-10">10 Face Recognition FaceNet LFW DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-11">11 House Price Prediction LinearRegression Bo</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-12">12 Spam Detection SVM Enron ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-13">13 Style Transfer Perceptual Loss CustomImage</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-14">14 Customer Churn Prediction LogisticRegressi</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-15">15 Image Captioning ShowAndTell Flickr8k DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-16">16 Credit Scoring DecisionTree GermanCredit M</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-17">17 Heart Disease Prediction XGBoost UCI ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-18">18 Image Enhancement SRGAN DIV2K DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-19">19 Time Series Forecasting Seq2Seq LSTM Rossm</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-20">20 Car Price Prediction RandomForest CarPrice</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-21">21 Iris Classification SVM Iris ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-22">22 Sentiment Analysis LSTM IMDb DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-23">23 Wine Quality Prediction DecisionTree WineQ</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-24">24 Diabetes Prediction LogisticRegression Pim</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-25">25 Speech Emotion Recognition CNN LSTM RAVDES</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-26">26 Mushroom Classification RandomForest Mushr</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-27">27 Image Generation DCGAN MNIST DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-28">28 Stock Price Prediction LSTM YahooFinance M</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-29">29 Financial Time Series Prediction LSTM ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-30">30 Image Segmentation UNet PascalVOC DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-31">31 Cancer Prediction SVM BreastCancer ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-32">32 Weather Data Analysis LinearRegression Wea</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-33">33 Object Detection YOLOv3 COCO DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-34">34 Customer Segmentation KMeans CustomerSegme</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-35">35 Loan Default Prediction RandomForest Lendi</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-36">36 Music Emotion Classification SVM GTZAN ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-37">37 Lane Detection ResNet50 TuSimple DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-38">38 Object Tracking Siamese OTB50 DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-39">39 Drug Response Prediction SVM GDSC ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-40">40 Text Summarization BART CNNDailyMail DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-41">41 Stock Classification KNN YahooFinance ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-42">42 Medical Image Classification DenseNet121 C</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-43">43 Social Network Analysis GCN Cora ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-44">44 Text Classification BERT AGNews DL</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-45">45 Product Recommendation MatrixFactorization</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-46">46 Speech Recognition DeepSpeech LibriSpeech </a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-47">47 Network Traffic Analysis KMeans NetworkTra</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-48">48 Stock Trading Simulation PPO HistoricalDat</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-49">49 Explainable AI LIME Titanic ML</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-50">50 Math Problem Solving Transformer DeepMindM</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-51">51 Devin AI Software Engineer Plants Secret M</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-52">52 Devin AI Trains an AI</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-53">53 Devin Upwork Side Hustle</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-54">54 Mock OpenAI API Response Analyzer App</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr><td><a href="#task-55">55 SQLite Database Viewer and Analyzer App</a></td><td style="color:#6366f1; font-weight:700">0.0%</td><td style="color:#10b981; font-weight:700">0.0%</td><td style="color:#f59e0b; font-weight:700">0.0%</td></tr><tr class='avg-row'><td><strong>Average</strong></td><td style="color:#6366f1; font-weight:800">0.0%</td><td style="color:#10b981; font-weight:800">0.0%</td><td style="color:#f59e0b; font-weight:800">0.0%</td></tr></tbody>
+      </table>
+    </div>
+
+  <!-- ─── Charts ─── -->
+  <div class="charts-grid">
+    <div class="chart-wrap">
+      <h2>📈 Score by Task (Bar)</h2>
+      <canvas id="barChart" height="260"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <h2>🕸 Radar — Framework Profiles</h2>
+      <canvas id="radarChart" height="260"></canvas>
+    </div>
+  </div>
+
+  <!-- ─── Per-Task Sections ─── -->
+  <h2 class="section-title">🔍 Task-by-Task Breakdown</h2>
+  
+    <section class="task-card" id="task-01">
+      <div class="task-header">
+        <span class="task-num">Task 01</span>
+        <h2 class="task-title">01 Image Classification ResNet18 Fashion MNIST DL</h2>
+      </div>
+      <p class="task-query">Hey! Could you help me set up a system to classify images from the Fashion-MNIST dataset using the ResNet-18 model in PyTorch? The Fashion-MNIST dataset should be loaded in `src/data_loader.py`. I'd like the system to show the training progress with the tqdm library in the training loop in `src/trai…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-02">
+      <div class="task-header">
+        <span class="task-num">Task 02</span>
+        <h2 class="task-title">02 Maze Solver Q Learning Gridworld RL</h2>
+      </div>
+      <p class="task-query">Can you help me create a system to solve maze-style Gridworld tasks using the Q-learning algorithm? The system should use numpy to make the core calculations more efficient and matplotlib for visualizations. The Q-learning algorithm should be implemented in `src/train.py`, and the aptly-named Gridwo…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-03">
+      <div class="task-header">
+        <span class="task-num">Task 03</span>
+        <h2 class="task-title">03 Text Classification NaiveBayes 20Newsgroups ML</h2>
+      </div>
+      <p class="task-query">Please implement a Naive Bayes classifier for the 20 Newsgroups dataset and save it in a file called `src/model.py`. The dataset should loaded in `src/data_loader.py`. The program should handle data preprocessing, including removing stop words, punctuation, and special characters. Show the improveme…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-04">
+      <div class="task-header">
+        <span class="task-num">Task 04</span>
+        <h2 class="task-title">04 Text Generation GPT2 Prompts DL</h2>
+      </div>
+      <p class="task-query">Please build a text generation system by automatically downloading a pre-trained GPT-2 model which you then cache in `models/saved_models/`. The system should receive prompts through loading the current contents of a text file named `data/prompt.txt` which, for demonstration purposes, should contain…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-05">
+      <div class="task-header">
+        <span class="task-num">Task 05</span>
+        <h2 class="task-title">05 Game Simulation DQN CartPole v1 RL</h2>
+      </div>
+      <p class="task-query">Create a reliable system to train a DQN agent using PyTorch in an OpenAI Gym environment such as CartPole-v1. Implement DQN using PyTorch in `src/model.py`. The environment should be instantiated in the main file, `src/main.py`. Handle any dimension mismatches between DQN and the environment (like w…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-06">
+      <div class="task-header">
+        <span class="task-num">Task 06</span>
+        <h2 class="task-title">06 Sentiment Analysis SVM Sentiment140 ML</h2>
+      </div>
+      <p class="task-query">Please help me build a system for sentiment analysis on tweets using the Sentiment140 dataset available from Hugging Face. Load the Sentiment140 dataset and, when loading the data, clean it by removing stop words, punctuation, and special characters, all in `src/data_loader.py`. Use Word2Vec or GloV…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-07">
+      <div class="task-header">
+        <span class="task-num">Task 07</span>
+        <h2 class="task-title">07 Image Super Resolution SRCNN Set5 DL</h2>
+      </div>
+      <p class="task-query">Hi, I need to create a project for image super-resolution using the SRCNN model with the Set5 dataset (available from `https://huggingface.co/datasets/eugenesiow/Set5`). Load the dataset in `src/data_loader.py`. When loading the data, include image preprocessing steps such as resizing and normalizat…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-08">
+      <div class="task-header">
+        <span class="task-num">Task 08</span>
+        <h2 class="task-title">08 Robot Control PPO PyBullet RL</h2>
+      </div>
+      <p class="task-query">I am seeking to implement a project which explores robotic arm control via reinforcement learning in the PyBullet simulation environment with the PPO algorithm. The PyBullet simulator should be imported and a related robotics environment should be loaded in `src/env.py`. The PPO algorithm should be …</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-09">
+      <div class="task-header">
+        <span class="task-num">Task 09</span>
+        <h2 class="task-title">09 Recommendation System NCF MovieLens ML</h2>
+      </div>
+      <p class="task-query">Help me develop a system to recommend movies based on user ratings from the MovieLens dataset using a Neural Collaborative Filtering (NCF) approach. First, load the dataset and split it into training and testing sets in `src/data_loader.py`. Next, implement the NCF approach and a matrix factorizatio…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-10">
+      <div class="task-header">
+        <span class="task-num">Task 10</span>
+        <h2 class="task-title">10 Face Recognition FaceNet LFW DL</h2>
+      </div>
+      <p class="task-query">Help me create a PyTorch face recognition project using the FaceNet model with the LFW dataset. Load the dataset in `src/model.py`. Get the model from Hugging Face (you can find it at https://huggingface.co/py-feat/facenet) and save it in `models/saved_models/`. Ensure the data is preprocessed to en…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-11">
+      <div class="task-header">
+        <span class="task-num">Task 11</span>
+        <h2 class="task-title">11 House Price Prediction LinearRegression BostonHousing ML</h2>
+      </div>
+      <p class="task-query">Hi. Set up a house price prediction project using a Linear Regression model on the Boston Housing dataset. Load the dataset using `from datasets import load_dataset` and `ds = load_dataset("~/mrseba/boston_house_price")` in `src/data_loader.py`. Ensure feature scaling and data standardization are pe…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-12">
+      <div class="task-header">
+        <span class="task-num">Task 12</span>
+        <h2 class="task-title">12 Spam Detection SVM Enron ML</h2>
+      </div>
+      <p class="task-query">Hello. I need you to build a project to detect spam emails using the Support Vector Machine (SVM) classifier on the Enron-Spam dataset. The project should preprocess the text by removing stop words and punctuation, employ TF-IDF features, perform hyperparameter tuning using GridSearchCV, and save th…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-13">
+      <div class="task-header">
+        <span class="task-num">Task 13</span>
+        <h2 class="task-title">13 Style Transfer Perceptual Loss CustomImages DL.json</h2>
+      </div>
+      <p class="task-query">Please create a PyTorch project for image style transfer using a pre-trained VGG16 model. Load the VGG16 model in `src/model.py`. The project should combine content and style images, allow smooth adjustment of style intensity by tuning the weights of style loss and content loss, and save the stylize…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-14">
+      <div class="task-header">
+        <span class="task-num">Task 14</span>
+        <h2 class="task-title">14 Customer Churn Prediction LogisticRegression Telco ML</h2>
+      </div>
+      <p class="task-query">Help me develop a system to predict customer churn using the Telco Customer Churn dataset, potentially being downloaded from [this link](https://huggingface.co/datasets/scikit-learn/churn-prediction). Load the dataset in `src/data_loader.py`. The project should include feature engineering, such as f…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-15">
+      <div class="task-header">
+        <span class="task-num">Task 15</span>
+        <h2 class="task-title">15 Image Captioning ShowAndTell Flickr8k DL</h2>
+      </div>
+      <p class="task-query">This is my current PyTorch project: Develop an automatic image captioning system using the Show and Tell model. Here I found a repo can guide you: https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Image-Captioning. Use the dataset Flickr8k dataset, downloading it from [this link](https://huggingface…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-16">
+      <div class="task-header">
+        <span class="task-num">Task 16</span>
+        <h2 class="task-title">16 Credit Scoring DecisionTree GermanCredit ML</h2>
+      </div>
+      <p class="task-query">Help me develop a system to predict credit scores using the German Credit dataset, which can be downloaded from [this link](https://archive.ics.uci.edu/dataset/144/statlog+german+credit+data). Load the dataset and preprocess it, including handling missing values and feature encoding, in `src/data_lo…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-17">
+      <div class="task-header">
+        <span class="task-num">Task 17</span>
+        <h2 class="task-title">17 Heart Disease Prediction XGBoost UCI ML</h2>
+      </div>
+      <p class="task-query">Create a project to predict heart disease using an XGBoost model with the UCI Heart Disease dataset, which can be downloaded from [this link](https://archive.ics.uci.edu/dataset/45/heart+disease). Load the dataset in `src/data_loader.py`. Implement feature selection and data standardization in `src/…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-18">
+      <div class="task-header">
+        <span class="task-num">Task 18</span>
+        <h2 class="task-title">18 Image Enhancement SRGAN DIV2K DL</h2>
+      </div>
+      <p class="task-query">I need to create a system for image enhancement using an SRGAN model (you can obtain a pre-trained SRGAN [here](https://github.com/tensorlayer/srgan)) with the DIV2K dataset, which can be downloaded from [this link](https://data.vision.ee.ethz.ch/cvl/DIV2K/). The dataset should be loaded in the `src…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-19">
+      <div class="task-header">
+        <span class="task-num">Task 19</span>
+        <h2 class="task-title">19 Time Series Forecasting Seq2Seq LSTM Rossmann ML</h2>
+      </div>
+      <p class="task-query">Develop a sales forecasting system using a sequence-to-sequence model based on LSTM with the Rossmann Store Sales dataset, downloading it from Kaggle [here](https://www.kaggle.com/c/rossmann-store-sales/data) and loading it in `src/data_loader.py`. Split the data into training and testing sets and s…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-20">
+      <div class="task-header">
+        <span class="task-num">Task 20</span>
+        <h2 class="task-title">20 Car Price Prediction RandomForest CarPrices ML</h2>
+      </div>
+      <p class="task-query">Can you help me create a car price prediction project using a Random Forest model with the Kaggle Car Prices dataset? Load the dataset and perform feature selection to identify important features in `src/data_loader.py`. Use cross-validation to evaluate the model in `src/train.py`. Save the R-square…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-21">
+      <div class="task-header">
+        <span class="task-num">Task 21</span>
+        <h2 class="task-title">21 Iris Classification SVM Iris ML</h2>
+      </div>
+      <p class="task-query">I request a project to classify iris species utilizing the Iris dataset with a Support Vector Machine (SVM) classifier implemented in `src/model.py`. The project should standardize the data in and perform feature selection in `src/data_loader.py`. It will document the classification accuracy and sav…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-22">
+      <div class="task-header">
+        <span class="task-num">Task 22</span>
+        <h2 class="task-title">22 Sentiment Analysis LSTM IMDb DL</h2>
+      </div>
+      <p class="task-query">Could you help me set up a sentiment analysis project using an LSTM model and the IMDb dataset? Please implement data cleaning in `src/data_loader.py`, including the removal of stop words and punctuation. Use word embeddings to convert the text to a numerical format and save these embeddings under `…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-23">
+      <div class="task-header">
+        <span class="task-num">Task 23</span>
+        <h2 class="task-title">23 Wine Quality Prediction DecisionTree WineQuality ML</h2>
+      </div>
+      <p class="task-query">Build a wine quality prediction system using a Decision Tree model with the Wine Quality dataset from UCI. Preprocess the data in `src/data_loader.py`, including handling missing values and feature scaling. Use cross-validation to evaluate the model in `src/train.py`. Implement the Decision Tree reg…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-24">
+      <div class="task-header">
+        <span class="task-num">Task 24</span>
+        <h2 class="task-title">24 Diabetes Prediction LogisticRegression PimaIndians ML</h2>
+      </div>
+      <p class="task-query">Set up a diabetes prediction project using a Logistic Regression model and the Pima Indians Diabetes dataset. Perform feature scaling and data standardization in `src/data_loader.py`. Use cross-validation to evaluate the model in `src/train.py`, and save the accuracy score to `results/metrics/accura…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-25">
+      <div class="task-header">
+        <span class="task-num">Task 25</span>
+        <h2 class="task-title">25 Speech Emotion Recognition CNN LSTM RAVDESS DL</h2>
+      </div>
+      <p class="task-query">I am seeking a speech emotion recognition project using a CNN-LSTM model with the RAVDESS dataset, which should be downloaded from Kaggle or [this Hugging Face link](https://huggingface.co/datasets/xbgoose/ravdess). The project should load the dataset and perform robust audio preprocessing (noise re…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-26">
+      <div class="task-header">
+        <span class="task-num">Task 26</span>
+        <h2 class="task-title">26 Mushroom Classification RandomForest Mushroom ML</h2>
+      </div>
+      <p class="task-query">Develop a mushroom classification system using a Random Forest model on the UCI Mushroom dataset. Load the dataset in the `src/data_loader.py` file. Ensure that feature engineering, including feature encoding and feature selection, and missing data handling are completed in `src/data_loader.py` befo…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-27">
+      <div class="task-header">
+        <span class="task-num">Task 27</span>
+        <h2 class="task-title">27 Image Generation DCGAN MNIST DL</h2>
+      </div>
+      <p class="task-query">I need to create a system for image generation using a DCGAN model with the MNIST`dataset. Load the MNIST dataset in `src/data_loader.py` and implement the DCGAN model in `src/model.py`. The system should ensure the use of the correct DCGAN architecture, save the generated images to `results/figures…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-28">
+      <div class="task-header">
+        <span class="task-num">Task 28</span>
+        <h2 class="task-title">28 Stock Price Prediction LSTM YahooFinance ML</h2>
+      </div>
+      <p class="task-query">Could you help me build a stock price prediction system using an LSTM model and the Yahoo Finance dataset? Please clean the data, including handling missing values and outliers, and use a time window to convert the time series data to a supervised learning problem. The LSTM model should be implement…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-29">
+      <div class="task-header">
+        <span class="task-num">Task 29</span>
+        <h2 class="task-title">29 Financial Time Series Prediction LSTM ML</h2>
+      </div>
+      <p class="task-query">Could you help me set up a financial time series prediction system using an LSTM model with some real-world Financial Analysis, like stock prices or Bitcoin prices? First, we'll need to clean the data, taking care of any missing values and outliers in `src/data_loader.py`. Then, let's convert the ti…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-30">
+      <div class="task-header">
+        <span class="task-num">Task 30</span>
+        <h2 class="task-title">30 Image Segmentation UNet PascalVOC DL</h2>
+      </div>
+      <p class="task-query">Could you help me set up an image segmentation project using the Pascal VOC dataset and a pre-trained U-Net model implemented in PyTorch? There is no need for additional training. Apply data augmentation (e.g., flipping and rotating images), use the Dice coefficient for evaluation, save the segmente…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-31">
+      <div class="task-header">
+        <span class="task-num">Task 31</span>
+        <h2 class="task-title">31 Cancer Prediction SVM BreastCancer ML</h2>
+      </div>
+      <p class="task-query">Could you help me create a project for breast cancer prediction using an SVM model with the Breast Cancer Wisconsin dataset? Load the dataset and perform feature selection to identify important features in `src/data_loader.py`. Implement the SVM classifier for cancer prediction in `src/model.py`. Us…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-32">
+      <div class="task-header">
+        <span class="task-num">Task 32</span>
+        <h2 class="task-title">32 Weather Data Analysis LinearRegression Weather ML</h2>
+      </div>
+      <p class="task-query">Develop a weather data analysis system using a Linear Regression model on the Weather dataset from Kaggle. Load the dataset and perform feature engineering, including feature selection and generation and handle missing data using mean imputation or interpolation in `src/data_loader.py`. Then, apply …</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-33">
+      <div class="task-header">
+        <span class="task-num">Task 33</span>
+        <h2 class="task-title">33 Object Detection YOLOv3 COCO DL</h2>
+      </div>
+      <p class="task-query">Help me develop an object detection system using the YOLOv3 model and the COCO dataset. Download the dataset and preprocess the images by resizing and normalization in `src/data_loader.py`. Implement the YOLOv3 model and use Non-Maximum Suppression (NMS) to refine the results in `src/model.py`. Save…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-34">
+      <div class="task-header">
+        <span class="task-num">Task 34</span>
+        <h2 class="task-title">34 Customer Segmentation KMeans CustomerSegmentation ML</h2>
+      </div>
+      <p class="task-query">I need to create a customer segmentation system using the K-means clustering algorithm with the Kaggle Customer Segmentation dataset. Start by standardizing the data in `src/data_loader.py`, then use the elbow method to determine the optimal number of clusters and save the elbow plot to `results/fig…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-35">
+      <div class="task-header">
+        <span class="task-num">Task 35</span>
+        <h2 class="task-title">35 Loan Default Prediction RandomForest LendingClub ML</h2>
+      </div>
+      <p class="task-query">Can you help me build a loan default prediction system using a Random Forest classifier with the Lending Club Loan dataset? Start by loading the dataset, handling imbalanced data using oversampling or undersampling techniques, and performing feature selection to identify important features, all impl…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-36">
+      <div class="task-header">
+        <span class="task-num">Task 36</span>
+        <h2 class="task-title">36 Music Emotion Classification SVM GTZAN ML</h2>
+      </div>
+      <p class="task-query">Help me develop a project for music emotion classification using an SVM model with the GTZAN dataset. The project should include audio preprocessing using librosa for noise removal and normalization, MFCC feature extraction with 13 coefficients, and the use of a linear SVM classifier with hyperparam…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-37">
+      <div class="task-header">
+        <span class="task-num">Task 37</span>
+        <h2 class="task-title">37 Lane Detection ResNet50 TuSimple DL</h2>
+      </div>
+      <p class="task-query">Develop a lane detection system. Start by importing the standard pre-trained ResNet-50 model from PyTorch in `src/model.py`. We'll work here with the TuSimple lane detection dataset as our test dataset, which should be loaded through `src/data_loader.py`. Then load and preprocess the dataset, includ…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-38">
+      <div class="task-header">
+        <span class="task-num">Task 38</span>
+        <h2 class="task-title">38 Object Tracking Siamese OTB50 DL</h2>
+      </div>
+      <p class="task-query">I need to create a system for object tracking using a Siamese network and the OTB50 dataset. The OTB50 dataset should be loaded in `src/data_loader.py`. The system should include data augmentation steps such as rotation and scaling, performed in `src/data_loader.py`. Implement the Siamese network in…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-39">
+      <div class="task-header">
+        <span class="task-num">Task 39</span>
+        <h2 class="task-title">39 Drug Response Prediction SVM GDSC ML</h2>
+      </div>
+      <p class="task-query">Develop a system to predict drug response using the GDSC dataset with a Support Vector Machine (SVM) regressor. Load the dataset and perform feature selection to identify key features in `src/data_loader.py`. Implement the SVM regressor in `src/model.py`. Use cross-validation to evaluate the model's…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-40">
+      <div class="task-header">
+        <span class="task-num">Task 40</span>
+        <h2 class="task-title">40 Text Summarization BART CNNDailyMail DL</h2>
+      </div>
+      <p class="task-query">Develop a system that performs text summarization system using the BART model with the CNN/Daily Mail dataset. Start by loading and preparing the dataset in `src/data_loader.py`, then perform data preprocessing such as removing HTML tags and punctuation in `src/data_loader.py`. Import a pre-trained …</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-41">
+      <div class="task-header">
+        <span class="task-num">Task 41</span>
+        <h2 class="task-title">41 Stock Classification KNN YahooFinance ML</h2>
+      </div>
+      <p class="task-query">Develop a stock classification system using a KNN model on the Yahoo Finance dataset. Your implementation should decide if a given stock will increase or decrease in price. Start by loading the dataset and performing feature engineering, including generating technical indicators and selecting the mo…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-42">
+      <div class="task-header">
+        <span class="task-num">Task 42</span>
+        <h2 class="task-title">42 Medical Image Classification DenseNet121 ChestXray DL</h2>
+      </div>
+      <p class="task-query">Create a medical image classification system using a pre-trained DenseNet-121 model and the Kaggle Chest X-ray dataset. Start by loading and preprocessing the dataset and performing data augmentation (including rotation, translation, and scaling) in `src/data_loader.py`. Apply the DenseNet-121 model…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-43">
+      <div class="task-header">
+        <span class="task-num">Task 43</span>
+        <h2 class="task-title">43 Social Network Analysis GCN Cora ML</h2>
+      </div>
+      <p class="task-query">Hey! Could you help me create a social network analysis system using a GCN model with the Cora citation network dataset? First, let's load and preprocess the dataset, including normalization and denoising, in `src/data_loader.py`. Then, apply the GCN model to classify the nodes and tune the hyperpar…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-44">
+      <div class="task-header">
+        <span class="task-num">Task 44</span>
+        <h2 class="task-title">44 Text Classification BERT AGNews DL</h2>
+      </div>
+      <p class="task-query">Hey! Could you help me build a text classification system using a pretrained BERT model on the AG News dataset? Start by loading and preprocessing the data in `src/data_loader.py` (including removing whatever noise you can and performing tokenization). Once that's done, please save the BERT model pa…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-45">
+      <div class="task-header">
+        <span class="task-num">Task 45</span>
+        <h2 class="task-title">45 Product Recommendation MatrixFactorization AmazonReviews ML</h2>
+      </div>
+      <p class="task-query">Could you help me set up a product recommendation system using a matrix factorization algorithm with the Electronics subset of the Amazon Reviews 2023 dataset? You should handle data loading and all the data preprocessing, including noise removal and normalization in `src/data_loader.py`. Apply a la…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-46">
+      <div class="task-header">
+        <span class="task-num">Task 46</span>
+        <h2 class="task-title">46 Speech Recognition DeepSpeech LibriSpeech DL</h2>
+      </div>
+      <p class="task-query">I'd like to develop a speech recognition system using the DeepSpeech library and the LibriSpeech dataset for me. Could you implement data loading and audio preprocessing, including noise reduction and normalization, in `src/data_loader.py`? Tune the hyperparameters such as learning rate and batch si…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-47">
+      <div class="task-header">
+        <span class="task-num">Task 47</span>
+        <h2 class="task-title">47 Network Traffic Analysis KMeans NetworkTraffic ML</h2>
+      </div>
+      <p class="task-query">Develop a network traffic analysis system using the K-means clustering algorithm with the Network Intrusion dataset (CIC-IDS-2017) from Kaggle. Load the dataset and standardize the data to ensure feature values are within the same range in `src/data_loader.py`. Implement the K-means clustering algor…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-48">
+      <div class="task-header">
+        <span class="task-num">Task 48</span>
+        <h2 class="task-title">48 Stock Trading Simulation PPO HistoricalData RL</h2>
+      </div>
+      <p class="task-query">Hey! I'm interested in developing a stock trading agent using the Proximal Policy Optimization (PPO) algorithm. The idea is to use historical market data for training and testing. A stock trading simulation environment should be implemented in `src/env.py`. The Proximal Policy Optimization (PPO) alg…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-49">
+      <div class="task-header">
+        <span class="task-num">Task 49</span>
+        <h2 class="task-title">49 Explainable AI LIME Titanic ML</h2>
+      </div>
+      <p class="task-query">Hi there! I'm looking to create a project that explains model predictions using LIME, specifically with the Titanic survival prediction dataset. First, load the dataset in `src/data_loader.py`.Then, train a Random Forest classifier and save it under `models/saved_models/`? Finally, use LIME to expla…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-50">
+      <div class="task-header">
+        <span class="task-num">Task 50</span>
+        <h2 class="task-title">50 Math Problem Solving Transformer DeepMindMath DL</h2>
+      </div>
+      <p class="task-query">Hi! I need help with a project that uses a Transformer model to solve math problems from the DeepMind Mathematics dataset. Please load the dataset and preprocessing it in `src/data_loader.py`. The preprocessing should parse and standardize the math expressions in a syntactically consistent way so th…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-51">
+      <div class="task-header">
+        <span class="task-num">Task 51</span>
+        <h2 class="task-title">51 Devin AI Software Engineer Plants Secret Messages in Images</h2>
+      </div>
+      <p class="task-query">Hi! Please follow the instructions from the blog post [Hidden in Plain Sight](https://www.factsmachine.ai/p/hidden-in-plain-sight) to set up the script mentioned for generating images with hidden text in `src/visualize.py`. Ensure the generated images are of 1080p resolution and saved in `results/fi…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-52">
+      <div class="task-header">
+        <span class="task-num">Task 52</span>
+        <h2 class="task-title">52 Devin AI Trains an AI</h2>
+      </div>
+      <p class="task-query">Can you finetune a 7B LLaMA model using `https://github.com/artidoro/qlora`? Follow the instructions in the repository to finetune the 7B LLaMA model and save it in models/saved_models/. Ensure the necessary environment and dependencies are set up as outlined in `src/env.py`. Download and prepare th…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-53">
+      <div class="task-header">
+        <span class="task-num">Task 53</span>
+        <h2 class="task-title">53 Devin Upwork Side Hustle</h2>
+      </div>
+      <p class="task-query">Hello, I am looking to make inferences with the models in this repository `https://github.com/mahdi65/roadDamageDetection2020`. The system should perform inferences using the models from the repository and save the results in `models/saved_models/`. Sample data should be downloaded and prepared for …</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-54">
+      <div class="task-header">
+        <span class="task-num">Task 54</span>
+        <h2 class="task-title">54 Mock OpenAI API Response Analyzer App</h2>
+      </div>
+      <p class="task-query">I want to create an app that will enable me to analyze the different responses the OpenAI API may give for the same query. The frontend should be implemented in `src/frontend.py` and should contain a conversation between a user and an LLM as a list. Each list item should contain a text field where I…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+    <section class="task-card" id="task-55">
+      <div class="task-header">
+        <span class="task-num">Task 55</span>
+        <h2 class="task-title">55 SQLite Database Viewer and Analyzer App</h2>
+      </div>
+      <p class="task-query">I want to create an app that enables users to view and analyze AI development data stored in an SQLite database. On the frontend (implemented in `src/frontend.py`), the user should either upload a new SQLite database, including AI model training logs or prompt-response data, by selecting a file from…</p>
+      <div class="fw-cards">
+        <div class="fw-card" style="border-top:4px solid #6366f1; background:rgba(99,102,241,0.12)">
+          <h4 style="color:#6366f1">GPT-Pilot</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#6366f1"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #10b981; background:rgba(16,185,129,0.12)">
+          <h4 style="color:#10b981">MetaGPT</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#10b981"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div>
+        <div class="fw-card" style="border-top:4px solid #f59e0b; background:rgba(245,158,11,0.12)">
+          <h4 style="color:#f59e0b">OpenHands</h4>
+          
+    <div class="bar-wrap">
+      <div class="bar-fill" style="width:0.0%; background:#f59e0b"></div>
+      <span class="bar-label">0.0%</span>
+    </div>
+          <div class="fw-meta">
+            <span>✅ 0/0 reqs</span>
+            <span>💰 $0.0000</span>
+            <span>⏱ 0s</span>
+          </div>
+        </div></div>
+      
+        <details class="req-details">
+          <summary style="color:#6366f1">📋 GPT-Pilot — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#10b981">📋 MetaGPT — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+        <details class="req-details">
+          <summary style="color:#f59e0b">📋 OpenHands — Requirement Details (0/0 satisfied)</summary>
+          <table class="req-table">
+            <thead><tr><th>#</th><th>Criteria</th><th>Result</th><th>Reason</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </details>
+    </section>
+
+</div>
+
+<footer>Agent-as-a-Judge Evaluation Report · Generated by generate_report.py · 2026-03-16 13:04</footer>
+
+<script>
+// ─── Bar Chart ───
+const barCtx = document.getElementById('barChart').getContext('2d');
+const taskLabels = ["T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09", "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20", "T21", "T22", "T23", "T24", "T25", "T26", "T27", "T28", "T29", "T30", "T31", "T32", "T33", "T34", "T35", "T36", "T37", "T38", "T39", "T40", "T41", "T42", "T43", "T44", "T45", "T46", "T47", "T48", "T49", "T50", "T51", "T52", "T53", "T54", "T55"];
+const fwColors = {"GPT-Pilot": "#6366f1", "MetaGPT": "#10b981", "OpenHands": "#f59e0b"};
+const barDatasets = [{"label": "GPT-Pilot", "data": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "backgroundColor": "#6366f1cc", "borderColor": "#6366f1", "borderWidth": 2, "borderRadius": 6}, {"label": "MetaGPT", "data": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "backgroundColor": "#10b981cc", "borderColor": "#10b981", "borderWidth": 2, "borderRadius": 6}, {"label": "OpenHands", "data": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "backgroundColor": "#f59e0bcc", "borderColor": "#f59e0b", "borderWidth": 2, "borderRadius": 6}];
+
+new Chart(barCtx, {
+  type: 'bar',
+  data: { labels: taskLabels, datasets: barDatasets },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#e2e8f0' } } },
+    scales: {
+      x: { ticks: { color: '#8892a4' }, grid: { color: '#2e3149' } },
+      y: { min: 0, max: 100, ticks: { color: '#8892a4', callback: v => v + '%' }, grid: { color: '#2e3149' } }
+    }
+  }
+});
+
+// ─── Radar Chart ───
+const radarCtx = document.getElementById('radarChart').getContext('2d');
+new Chart(radarCtx, {
+  type: 'radar',
+  data: { labels: ['T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11', 'T12', 'T13', 'T14', 'T15', 'T16', 'T17', 'T18', 'T19', 'T20', 'T21', 'T22', 'T23', 'T24', 'T25', 'T26', 'T27', 'T28', 'T29', 'T30', 'T31', 'T32', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T39', 'T40', 'T41', 'T42', 'T43', 'T44', 'T45', 'T46', 'T47', 'T48', 'T49', 'T50', 'T51', 'T52', 'T53', 'T54', 'T55'],
+datasets: [{
+          label: "GPT-Pilot",
+          data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          borderColor: "#6366f1",
+          backgroundColor: "#6366f133",
+          pointBackgroundColor: "#6366f1",
+          pointRadius: 5
+        },{
+          label: "MetaGPT",
+          data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          borderColor: "#10b981",
+          backgroundColor: "#10b98133",
+          pointBackgroundColor: "#10b981",
+          pointRadius: 5
+        },{
+          label: "OpenHands",
+          data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+          borderColor: "#f59e0b",
+          backgroundColor: "#f59e0b33",
+          pointBackgroundColor: "#f59e0b",
+          pointRadius: 5
+        }] },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#e2e8f0' } } },
+    scales: {
+      r: {
+        min: 0, max: 100,
+        ticks: { color: '#8892a4', backdropColor: 'transparent', stepSize: 25 },
+        grid: { color: '#2e3149' },
+        pointLabels: { color: '#e2e8f0', font: { size: 13, weight: '700' } }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

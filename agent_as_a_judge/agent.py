@@ -194,6 +194,13 @@ class JudgeAgent:
                 criteria, workflow, user_query=user_query
             )
 
+            # Persist requirement-level prediction metadata for downstream confidence analysis.
+            requirement["satisfied"] = llm_stats["satisfied"]
+            requirement["confidence"] = llm_stats.get("confidence")
+            requirement["satisfied_ratio"] = llm_stats.get("satisfied_ratio")
+            requirement["majority_vote"] = llm_stats.get("majority_vote")
+            requirement["critical_threshold"] = llm_stats.get("critical_threshold")
+
             if planning_llm_stats:
                 llm_stats["input_tokens"] += planning_llm_stats.get("input_tokens", 0)
                 llm_stats["output_tokens"] += planning_llm_stats.get("output_tokens", 0)
@@ -309,7 +316,12 @@ class JudgeAgent:
         combined_evidence = truncate_string(
             combined_evidence, model=self.llm.model_name
         )
-        check_llm_stats = self.aaaj_ask.check(criteria, combined_evidence)
+        check_llm_stats = self.aaaj_ask.check(
+            criteria,
+            combined_evidence,
+            majority_vote=self.config.majority_vote,
+            critical_threshold=self.config.critical_threshold,
+        )
         total_llm_stats.update(check_llm_stats)
         total_time = time.time() - start_time
 
