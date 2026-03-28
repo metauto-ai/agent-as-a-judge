@@ -14,6 +14,8 @@ class AgentConfig:
     workspace_dir: Optional[Path] = None
     instance_dir: Optional[Path] = None
     trajectory_file: Optional[Path] = None
+    majority_vote: int = 1
+    critical_threshold: float = 0.5
 
     @classmethod
     def from_args(cls, args):
@@ -39,5 +41,13 @@ class AgentConfig:
             instance_dir=Path(args.instance_dir),
             trajectory_file=(
                 Path(args.trajectory_file) if args.trajectory_file else None
+            ),
+            majority_vote=(
+                args.majority_vote if hasattr(args, "majority_vote") else 1
+            ),
+            critical_threshold=(
+                args.critical_threshold
+                if hasattr(args, "critical_threshold")
+                else 0.5
             ),
         )

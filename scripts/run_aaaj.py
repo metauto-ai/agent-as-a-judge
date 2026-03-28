@@ -117,6 +117,18 @@ def parse_arguments():
         type=str,
         help="Path to the trajectory directory, if available",
     )
+    parser.add_argument(
+        "--majority_vote",
+        type=int,
+        default=1,
+        help="Number of independent judge calls per requirement for confidence estimation",
+    )
+    parser.add_argument(
+        "--critical_threshold",
+        type=float,
+        default=0.5,
+        help="Decision threshold over satisfied vote ratio",
+    )
 
     return parser.parse_args()
 
@@ -147,6 +159,8 @@ if __name__ == "__main__":
         workspace_dir=workspace_dir,
         instance_dir=instance_dir,
         trajectory_file=trajectory_file,
+        majority_vote=args.majority_vote,
+        critical_threshold=args.critical_threshold,
     )
 
     main(

@@ -1,0 +1,112 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\title{Confidence Estimation for Agent-as-a-Judge: \\
+Implementation Note and Initial Experimental Outputs}
+\author{Project Report}
+\date{March 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document summarizes the implemented confidence estimation extension for the Agent-as-a-Judge (AaaJ) pipeline and reports the currently available experimental outputs. The implementation introduces majority-vote based confidence at requirement level and an evaluation script that computes Accuracy, Mean Confidence, and AUROC against human judgments. Initial results are reported on existing benchmark outputs for OpenHands, MetaGPT, and GPT-Pilot. These initial outputs are informative as a baseline but are not yet sufficient to claim calibrated confidence quality because legacy files contain near-constant confidence.
+\end{abstract}
+
+\section{Problem Statement}
+Current AaaJ outputs provide binary satisfaction decisions for each requirement but do not quantify how certain the model is about each decision. Without a confidence signal, it is difficult to:
+\begin{itemize}[leftmargin=*]
+    \item distinguish reliable from unreliable automatic judgments,
+    \item prioritize manual verification effort, and
+    \item evaluate calibration quality of the judge itself.
+\end{itemize}
+The objective is to augment each requirement-level decision with a confidence estimate and evaluate whether that confidence is predictive of correctness compared to human labels.
+
+\section{Implementation}
+\subsection{Confidence Formulation}
+For each requirement, the judge can run multiple LLM checks (majority vote):
+\begin{equation}
+\text{satisfied\_ratio} = \frac{\#\text{SATISFIED votes}}{k}
+\end{equation}
+\begin{equation}
+\hat{y} = \mathbb{1}[\text{satisfied\_ratio} \geq \tau]
+\end{equation}
+\begin{equation}
+\text{confidence} = \max(\text{satisfied\_ratio},\; 1-\text{satisfied\_ratio})
+\end{equation}
+where $k$ is \texttt{majority\_vote} and $\tau$ is \texttt{critical\_threshold}.
+
+\subsection{Code-Level Integration}
+The pipeline was extended with:
+\begin{itemize}[leftmargin=*]
+    \item new configuration fields: \texttt{majority\_vote} and \texttt{critical\_threshold},
+    \item confidence computation in requirement checking,
+    \item persistence of \texttt{confidence}, \texttt{satisfied\_ratio}, and vote metadata in each requirement record,
+    \item CLI exposure of vote parameters in the run script,
+    \item a new evaluation script for Accuracy, Mean Confidence, and AUROC.
+\end{itemize}
+
+\section{Contribution}
+The current contribution is an end-to-end confidence estimation layer for AaaJ with executable evaluation tooling:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Inference-time confidence}: requirement-level confidence from vote consistency.
+    \item \textbf{Data schema extension}: confidence fields stored directly with each judged requirement.
+    \item \textbf{Reproducible evaluation}: script-based computation of Accuracy, Mean Confidence, and AUROC over 55-task DevAI runs.
+\end{enumerate}
+
+\section{Experiments}
+\subsection{Experiment 1: Baseline Evaluation on Existing Judgment Files}
+\textbf{Setup.} Evaluated three frameworks (OpenHands, MetaGPT, GPT-Pilot) by comparing AaaJ decisions against human judgments using the implemented metric script.
+
+\textbf{Outputs.} The following aggregate metrics were obtained:
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Framework & Accuracy & Mean Confidence & AUROC \\
+\midrule
+OpenHands & 0.9016 & 1.0000 & 0.4861 \\
+MetaGPT & 0.9208 & 1.0000 & 0.4828 \\
+GPT-Pilot & 0.8661 & 1.0000 & 0.4898 \\
+\bottomrule
+\end{tabular}
+\caption{Initial confidence metrics on available legacy outputs.}
+\end{table}
+
+\textbf{Interpretation.} AUROC is near random ($\approx 0.5$) despite high accuracy, mainly because confidence is effectively constant in legacy files (single-vote behavior), which limits rank discrimination.
+
+\subsection{Experiment 2: Pipeline Validation of Confidence Integration}
+\textbf{Setup.} Verified that the confidence fields are generated and propagated through the AaaJ pipeline and that modified files pass static error checks.
+
+\textbf{Outputs.}
+\begin{itemize}[leftmargin=*]
+    \item New configurable vote parameters are available from CLI and config.
+    \item Requirement outputs now include confidence-related fields.
+    \item No immediate code errors were reported after integration checks.
+\end{itemize}
+
+\textbf{Interpretation.} The implementation path is operational; however, calibration quality cannot be judged from legacy single-vote outputs.
+
+\section{Limitations}
+The current evidence has the following limitations:
+\begin{itemize}[leftmargin=*]
+    \item Existing benchmark output files were generated without multi-vote variation, leading to near-constant confidence.
+    \item Near-constant confidence makes AUROC uninformative for calibration assessment.
+    \item No ECE/reliability diagram is included yet, so calibration shape is not analyzed.
+\end{itemize}
+
+\section{Output Artifacts Available}
+\begin{itemize}[leftmargin=*]
+    \item Full 55-task HTML report (existing in project reports).
+    \item Confidence evaluator script output (Accuracy, Mean Confidence, AUROC) for three frameworks.
+    \item Extended judgment schema with confidence-related fields for future runs.
+\end{itemize}
+
+\section{Conclusion}
+A confidence estimation mechanism has been implemented in AaaJ and validated at integration level. Initial benchmark outputs provide a baseline but do not yet demonstrate calibrated discrimination due to legacy single-vote files. The immediate next experimental step is to regenerate judgments with multi-vote settings (e.g., $k=5$) and re-run the same metrics to obtain meaningful AUROC-based calibration evidence.
+
+\end{document}

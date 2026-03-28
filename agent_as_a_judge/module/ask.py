@@ -52,9 +52,20 @@ class DevAsk:
 
         satisfied_count = judges.count("<SATISFIED>")
         total_judges = len(judges)
+        satisfied_ratio = (satisfied_count / total_judges) if total_judges else 0.0
         majority_judge = (satisfied_count / total_judges) >= critical_threshold
+        confidence = max(satisfied_ratio, 1.0 - satisfied_ratio)
 
-        total_llm_stats.update({"satisfied": majority_judge, "reason": responses})
+        total_llm_stats.update(
+            {
+                "satisfied": majority_judge,
+                "reason": responses,
+                "confidence": round(confidence, 4),
+                "satisfied_ratio": round(satisfied_ratio, 4),
+                "majority_vote": total_judges,
+                "critical_threshold": critical_threshold,
+            }
+        )
         return total_llm_stats
 
     def _collect_judgments(
